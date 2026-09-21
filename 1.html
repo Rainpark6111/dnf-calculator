@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>던파 종말의 계시 계산기</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .calculator-card {
+            background-color: #2b2b3d;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 380px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #f5e0dc;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #bac2de;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #45475a;
+            background-color: #181825;
+            color: #cdd6f4;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input[type="number"]:focus {
+            border-color: #cba6f7;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #cba6f7;
+            color: #11111b;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #b4befe;
+        }
+        .result-box {
+            margin-top: 24px;
+            padding: 15px;
+            background-color: #181825;
+            border-radius: 6px;
+            border-left: 4px solid #cba6f7;
+        }
+        .result-item {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .highlight {
+            color: #f9e2af;
+            font-weight: bold;
+        }
+        .alert {
+            color: #f38ba8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-card">
+    <h2>종말의 계시 계산기</h2>
+    
+    <div class="input-group">
+        <label for="fatigue">현재 피로도</label>
+        <input type="number" id="fatigue" placeholder="예: 156" min="0">
+    </div>
+    
+    <div class="input-group">
+        <label for="revelations">보유 종말의 계시</label>
+        <input type="number" id="revelations" placeholder="예: 500" min="0">
+    </div>
+    
+    <button onclick="calculate()">계산하기</button>
+
+    <div class="result-box" id="resultBox" style="display: none;">
+        <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
+        <div class="result-item">현재 입장 가능: <span class="highlight" id="actualRuns">0</span>판</div>
+        <div class="result-item" id="missingInfo"></div>
+    </div>
+</div>
+
+<script>
+function calculate() {
+    const fatigue = parseInt(document.getElementById('fatigue').value) || 0;
+    const revelations = parseInt(document.getElementById('revelations').value) || 0;
+
+    // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
+    const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
+    
+    // 보유 종말의 계시로 돌 수 있는 횟수
+    const maxRunsByRev = Math.floor(revelations / 49);
+    
+    // 실제 입장 가능 횟수
+    const actualRuns = Math.min(maxRunsByFatigue, maxRunsByRev);
+    
+    // 피로도 다 쓰기 위해 필요한 총 종말의 계시
+    const totalRevNeeded = maxRunsByFatigue * 49;
+    const missingRev = Math.max(0, totalRevNeeded - revelations);
+
+    // UI 업데이트
+    document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
+    document.getElementById('actualRuns').innerText = actualRuns;
+    
+    const missingInfoEl = document.getElementById('missingInfo');
+    if (missingRev > 0) {
+        missingInfoEl.innerHTML = `부족한 종말의 계시: <span class="alert">${missingRev}개</span>`;
+    } else if (maxRunsByFatigue > 0) {
+        missingInfoEl.innerHTML = `<span class="highlight">피로도를 모두 소진할 수 있습니다!</span>`;
+    } else {
+        missingInfoEl.innerHTML = `피로도를 입력해주세요.`;
+    }
+
+    document.getElementById('resultBox').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
