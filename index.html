@@ -52,22 +52,6 @@
         input[type="number"]:focus {
             border-color: #cba6f7;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #cba6f7;
-            color: #11111b;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #b4befe;
-        }
         .result-box {
             margin-top: 24px;
             padding: 15px;
@@ -96,15 +80,13 @@
     
     <div class="input-group">
         <label for="fatigue">현재 피로도</label>
-        <input type="number" id="fatigue" placeholder="예: 156" min="0">
+        <input type="number" id="fatigue" placeholder="예: 156" min="0" oninput="calculate()">
     </div>
     
     <div class="input-group">
         <label for="revelations">보유 종말의 계시</label>
-        <input type="number" id="revelations" placeholder="예: 500" min="0">
+        <input type="number" id="revelations" placeholder="예: 500" min="0" oninput="calculate()">
     </div>
-    
-    <button onclick="calculate()">계산하기</button>
 
     <div class="result-box" id="resultBox" style="display: none;">
         <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
@@ -115,8 +97,18 @@
 
 <script>
 function calculate() {
-    const fatigue = parseInt(document.getElementById('fatigue').value) || 0;
-    const revelations = parseInt(document.getElementById('revelations').value) || 0;
+    const fatigueInput = document.getElementById('fatigue').value;
+    const revInput = document.getElementById('revelations').value;
+    const resultBox = document.getElementById('resultBox');
+
+    // 입력창이 모두 비어있으면 결과창 숨김
+    if (fatigueInput === '' && revInput === '') {
+        resultBox.style.display = 'none';
+        return;
+    }
+
+    const fatigue = parseInt(fatigueInput) || 0;
+    const revelations = parseInt(revInput) || 0;
 
     // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
@@ -144,7 +136,7 @@ function calculate() {
         missingInfoEl.innerHTML = `피로도를 입력해주세요.`;
     }
 
-    document.getElementById('resultBox').style.display = 'block';
+    resultBox.style.display = 'block';
 }
 </script>
 
