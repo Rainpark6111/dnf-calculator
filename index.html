@@ -88,7 +88,13 @@
         <input type="number" id="revelations" placeholder="예: 500" min="0" oninput="calculate()">
     </div>
 
+    <div class="input-group">
+        <label for="eventRevelations">[Event]종말의 계시</label>
+        <input type="number" id="eventRevelations" placeholder="예: 100" min="0" oninput="calculate()">
+    </div>
+
     <div class="result-box" id="resultBox" style="display: none;">
+        <div class="result-item">총 보유 종말의 계시: <span class="highlight" id="totalRevSum">0</span>개</div>
         <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
         <div class="result-item">현재 입장 가능: <span class="highlight" id="actualRuns">0</span>판</div>
         <div class="result-item" id="missingInfo"></div>
@@ -99,31 +105,37 @@
 function calculate() {
     const fatigueInput = document.getElementById('fatigue').value;
     const revInput = document.getElementById('revelations').value;
+    const eventRevInput = document.getElementById('eventRevelations').value;
     const resultBox = document.getElementById('resultBox');
 
-    // 입력창이 모두 비어있으면 결과창 숨김
-    if (fatigueInput === '' && revInput === '') {
+    // 모든 입력창이 비어있으면 결과창 숨김
+    if (fatigueInput === '' && revInput === '' && eventRevInput === '') {
         resultBox.style.display = 'none';
         return;
     }
 
     const fatigue = parseInt(fatigueInput) || 0;
     const revelations = parseInt(revInput) || 0;
+    const eventRevelations = parseInt(eventRevInput) || 0;
+
+    // 총 보유 종말의 계시 합산 (일반 + 이벤트)
+    const totalRevelations = revelations + eventRevelations;
 
     // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
     
-    // 보유 종말의 계시로 돌 수 있는 횟수
-    const maxRunsByRev = Math.floor(revelations / 49);
+    // 총 보유 종말의 계시로 돌 수 있는 횟수
+    const maxRunsByRev = Math.floor(totalRevelations / 49);
     
     // 실제 입장 가능 횟수
     const actualRuns = Math.min(maxRunsByFatigue, maxRunsByRev);
     
     // 피로도 다 쓰기 위해 필요한 총 종말의 계시
     const totalRevNeeded = maxRunsByFatigue * 49;
-    const missingRev = Math.max(0, totalRevNeeded - revelations);
+    const missingRev = Math.max(0, totalRevNeeded - totalRevelations);
 
     // UI 업데이트
+    document.getElementById('totalRevSum').innerText = totalRevelations;
     document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
     document.getElementById('actualRuns').innerText = actualRuns;
     
