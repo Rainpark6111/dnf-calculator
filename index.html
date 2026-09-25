@@ -12,8 +12,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px 0;
+            box-sizing: border-box;
         }
         .calculator-card {
             background-color: #2b2b3d;
@@ -82,6 +84,11 @@
         <label for="fatigue">현재 피로도</label>
         <input type="text" id="fatigue" placeholder="예: 156 또는 100+56" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
+
+    <div class="input-group">
+        <label for="tickets">보유 입장권</label>
+        <input type="text" id="tickets" placeholder="예: 5 또는 2+3" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    </div>
     
     <div class="input-group">
         <label for="revelations">보유 종말의 계시</label>
@@ -140,18 +147,20 @@ function handleEnter(event, inputEl) {
 
 function calculate() {
     const fatigueInput = document.getElementById('fatigue').value.trim();
+    const ticketsInput = document.getElementById('tickets').value.trim();
     const revInput = document.getElementById('revelations').value.trim();
     const eventRevInput = document.getElementById('eventRevelations').value.trim();
     const resultBox = document.getElementById('resultBox');
 
     // 모든 입력창이 비어있으면 결과창 숨김
-    if (fatigueInput === '' && revInput === '' && eventRevInput === '') {
+    if (fatigueInput === '' && ticketsInput === '' && revInput === '' && eventRevInput === '') {
         resultBox.style.display = 'none';
         return;
     }
 
     // 수식 문자열 계산
     const fatigue = parseMath(fatigueInput);
+    const tickets = parseMath(ticketsInput);
     const revelations = parseMath(revInput);
     const eventRevelations = parseMath(eventRevInput);
 
@@ -161,14 +170,23 @@ function calculate() {
     // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
     
-    // 총 보유 종말의 계시로 돌 수 있는 횟수
+    // 입장권으로 먼저 대체 가능한 판 수 (피로도 기준 판 수를 넘지 않음)
+    const ticketRuns = Math.min(maxRunsByFatigue, tickets);
+    
+    // 입장권 사용 후 종말의 계시가 필요한 남아있는 판 수
+    const remainingRunsNeeded = maxRunsByFatigue - ticketRuns;
+    
+    // 보유 종말의 계시로 돌 수 있는 횟수
     const maxRunsByRev = Math.floor(totalRevelations / 49);
     
-    // 실제 입장 가능 횟수
-    const actualRuns = Math.min(maxRunsByFatigue, maxRunsByRev);
+    // 종말의 계시로 입장 가능한 판 수
+    const revRuns = Math.min(remainingRunsNeeded, maxRunsByRev);
     
-    // 피로도 다 쓰기 위해 필요한 총 종말의 계시
-    const totalRevNeeded = maxRunsByFatigue * 49;
+    // 실제 총 입장 가능 횟수 (입장권 사용 판 수 + 종말의 계시 사용 판 수)
+    const actualRuns = ticketRuns + revRuns;
+    
+    // 피로도를 모두 쓰기 위해 부족한 종말의 계시 계산
+    const totalRevNeeded = remainingRunsNeeded * 49;
     const missingRev = Math.max(0, totalRevNeeded - totalRevelations);
 
     // UI 업데이트
