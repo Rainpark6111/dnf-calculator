@@ -38,7 +38,7 @@
             font-size: 14px;
             color: #bac2de;
         }
-        input[type="number"] {
+        input[type="text"] {
             width: 100%;
             padding: 10px;
             border-radius: 6px;
@@ -49,7 +49,7 @@
             box-sizing: border-box;
             outline: none;
         }
-        input[type="number"]:focus {
+        input[type="text"]:focus {
             border-color: #cba6f7;
         }
         .result-box {
@@ -80,17 +80,17 @@
     
     <div class="input-group">
         <label for="fatigue">현재 피로도</label>
-        <input type="number" id="fatigue" placeholder="예: 156" min="0" oninput="calculate()">
+        <input type="text" id="fatigue" placeholder="예: 156 또는 100+56" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
     
     <div class="input-group">
         <label for="revelations">보유 종말의 계시</label>
-        <input type="number" id="revelations" placeholder="예: 500" min="0" oninput="calculate()">
+        <input type="text" id="revelations" placeholder="예: 500 또는 200+300" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
     <div class="input-group">
         <label for="eventRevelations">[Event]종말의 계시</label>
-        <input type="number" id="eventRevelations" placeholder="예: 100" min="0" oninput="calculate()">
+        <input type="text" id="eventRevelations" placeholder="예: 100 또는 50+50" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
     <div class="result-box" id="resultBox" style="display: none;">
@@ -102,10 +102,46 @@
 </div>
 
 <script>
+// 수식을 안전하게 계산하는 함수
+function parseMath(expression) {
+    if (!expression) return 0;
+    
+    // 공백 제거 및 허용되지 않은 문자 검증 (숫자 및 + - * / . 만 허용)
+    const sanitized = expression.replace(/\s+/g, '');
+    if (!/^[0-9+\-*/.]*$/.test(sanitized)) return 0;
+
+    try {
+        const result = new Function(`return ${sanitized}`)();
+        return isNaN(result) || !isFinite(result) ? 0 : Math.floor(result);
+    } catch (e) {
+        return 0;
+    }
+}
+
+// 입력창 내의 수식을 계산 결과값으로 치환하는 함수
+function evaluateInput(inputEl) {
+    const val = inputEl.value.trim();
+    if (!val) return;
+
+    // 사칙연산 기호가 포함되어 있는 경우에만 치환
+    if (/[+\-*/]/.test(val)) {
+        const calculatedVal = parseMath(val);
+        inputEl.value = calculatedVal;
+        calculate(); // 치환 후 결과 재계산
+    }
+}
+
+// 엔터 키 입력 시 포커스를 해제(blur)하여 수식을 계산값으로 변경
+function handleEnter(event, inputEl) {
+    if (event.key === 'Enter') {
+        inputEl.blur();
+    }
+}
+
 function calculate() {
-    const fatigueInput = document.getElementById('fatigue').value;
-    const revInput = document.getElementById('revelations').value;
-    const eventRevInput = document.getElementById('eventRevelations').value;
+    const fatigueInput = document.getElementById('fatigue').value.trim();
+    const revInput = document.getElementById('revelations').value.trim();
+    const eventRevInput = document.getElementById('eventRevelations').value.trim();
     const resultBox = document.getElementById('resultBox');
 
     // 모든 입력창이 비어있으면 결과창 숨김
@@ -114,9 +150,10 @@ function calculate() {
         return;
     }
 
-    const fatigue = parseInt(fatigueInput) || 0;
-    const revelations = parseInt(revInput) || 0;
-    const eventRevelations = parseInt(eventRevInput) || 0;
+    // 수식 문자열 계산
+    const fatigue = parseMath(fatigueInput);
+    const revelations = parseMath(revInput);
+    const eventRevelations = parseMath(eventRevInput);
 
     // 총 보유 종말의 계시 합산 (일반 + 이벤트)
     const totalRevelations = revelations + eventRevelations;
