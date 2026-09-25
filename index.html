@@ -24,12 +24,38 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
             width: 100%;
             max-width: 380px;
+            position: relative; /* 버튼 정렬을 위한 위치 기준선 */
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
         }
         h2 {
-            margin-top: 0;
+            margin: 0;
             color: #f5e0dc;
-            text-align: center;
-            margin-bottom: 24px;
+            font-size: 20px;
+        }
+        .link-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .link-btn {
+            background-color: #181825;
+            color: #cba6f7;
+            border: 1px solid #45475a;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .link-btn:hover {
+            background-color: #cba6f7;
+            color: #181825;
+            border-color: #cba6f7;
         }
         .input-group {
             margin-bottom: 18px;
@@ -101,26 +127,32 @@
 <body>
 
 <div class="calculator-card">
-    <h2>종말의 계시 계산기</h2>
+    <div class="header-container">
+        <h2>종말의 계시 계산기</h2>
+        <div class="link-buttons">
+            <a href="https://dundam.xyz/search?server=all&name=%EB%A0%88%EC%9D%B8%EB%B0%95" target="_blank" class="link-btn">던담</a>
+            <a href="https://dfmax.xyz/jobs" target="_blank" class="link-btn">던파맥스</a>
+        </div>
+    </div>
     
     <div class="input-group">
         <label for="fatigue">현재 피로도</label>
-        <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        <input type="text" id="fatigue" placeholder="예: 156 또는 100+56" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
     
     <div class="input-group">
         <label for="revelations">보유 종말의 계시</label>
-        <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        <input type="text" id="revelations" placeholder="예: 500 또는 200+300" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
     <div class="input-group">
         <label for="eventRevelations">[Event]종말의 계시</label>
-        <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        <input type="text" id="eventRevelations" placeholder="예: 100 또는 50+50" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
     <div class="input-group">
         <label for="tickets">보유 입장권</label>
-        <input type="text" id="tickets" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        <input type="text" id="tickets" placeholder="예: 5 또는 2+3" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
     <!-- 할인 옵션 체크박스 -->
@@ -133,7 +165,7 @@
         </label>
     </div>
 
-    <!-- 결과 박스 (항상 표시) -->
+    <!-- 결과 박스 -->
     <div class="result-box" id="resultBox">
         <div class="result-item">1판당 소모 계시: <span class="highlight" id="costPerRun">49</span>개</div>
         <div class="result-item">총 보유 종말의 계시: <span class="highlight" id="totalRevSum">0</span>개</div>
@@ -187,7 +219,7 @@ function calculate() {
     const isBattlePass = document.getElementById('battlePass').checked;
     const isPcRoom = document.getElementById('pcRoom').checked;
 
-    // 할인율 계산 (기본 49개, 각 체크박스당 -5개씩)
+    // 할인율 계산
     let revCostPerRun = 49;
     if (isBattlePass) revCostPerRun -= 5;
     if (isPcRoom) revCostPerRun -= 5;
@@ -201,25 +233,23 @@ function calculate() {
     // 총 보유 종말의 계시 합산
     const totalRevelations = revelations + eventRevelations;
 
-    // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
+    // 피로도로 돌 수 있는 총 횟수
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
     
-    // 입장권으로 먼저 대체 가능한 판 수
+    // 입장권 사용 가능 판 수
     const ticketRuns = Math.min(maxRunsByFatigue, tickets);
     
-    // 입장권 사용 후 종말의 계시가 필요한 남아있는 판 수
+    // 남은 필요 판 수
     const remainingRunsNeeded = maxRunsByFatigue - ticketRuns;
     
-    // 보유 종말의 계시로 돌 수 있는 횟수 (할인 적용된 소모량 기준)
+    // 계시 소모 판 수
     const maxRunsByRev = Math.floor(totalRevelations / revCostPerRun);
-    
-    // 종말의 계시로 입장 가능한 판 수
     const revRuns = Math.min(remainingRunsNeeded, maxRunsByRev);
     
-    // 실제 총 입장 가능 횟수
+    // 실제 입장 가능 횟수
     const actualRuns = ticketRuns + revRuns;
     
-    // 피로도를 모두 쓰기 위해 부족한 종말의 계시 계산
+    // 부족한 계시 계산
     const totalRevNeeded = remainingRunsNeeded * revCostPerRun;
     const missingRev = Math.max(0, totalRevNeeded - totalRevelations);
 
