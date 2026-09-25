@@ -54,6 +54,29 @@
         input[type="text"]:focus {
             border-color: #cba6f7;
         }
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 18px;
+            background-color: #181825;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #45475a;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #cdd6f4;
+        }
+        .checkbox-item input[type="checkbox"] {
+            accent-color: #cba6f7;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
         .result-box {
             margin-top: 24px;
             padding: 15px;
@@ -94,17 +117,29 @@
         <label for="eventRevelations">[Event]종말의 계시</label>
         <input type="text" id="eventRevelations" placeholder="예: 100 또는 50+50" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
-    
+
     <div class="input-group">
         <label for="tickets">보유 입장권</label>
         <input type="text" id="tickets" placeholder="예: 5 또는 2+3" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
 
-    <div class="result-box" id="resultBox" style="display: none;">
+    <!-- 할인 옵션 체크박스 -->
+    <div class="checkbox-group">
+        <label class="checkbox-item">
+            <input type="checkbox" id="battlePass" onchange="calculate()"> 배틀패스 (-5개)
+        </label>
+        <label class="checkbox-item">
+            <input type="checkbox" id="pcRoom" onchange="calculate()"> PC방 (-5개)
+        </label>
+    </div>
+
+    <!-- 결과 박스 (항상 표시) -->
+    <div class="result-box" id="resultBox">
+        <div class="result-item">1판당 소모 계시: <span class="highlight" id="costPerRun">49</span>개</div>
         <div class="result-item">총 보유 종말의 계시: <span class="highlight" id="totalRevSum">0</span>개</div>
         <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
         <div class="result-item">현재 입장 가능: <span class="highlight" id="actualRuns">0</span>판</div>
-        <div class="result-item" id="missingInfo"></div>
+        <div class="result-item" id="missingInfo">피로도를 입력해주세요.</div>
     </div>
 </div>
 
@@ -113,7 +148,6 @@
 function parseMath(expression) {
     if (!expression) return 0;
     
-    // 공백 제거 및 허용되지 않은 문자 검증 (숫자 및 + - * / . 만 허용)
     const sanitized = expression.replace(/\s+/g, '');
     if (!/^[0-9+\-*/.]*$/.test(sanitized)) return 0;
 
@@ -130,15 +164,14 @@ function evaluateInput(inputEl) {
     const val = inputEl.value.trim();
     if (!val) return;
 
-    // 사칙연산 기호가 포함되어 있는 경우에만 치환
     if (/[+\-*/]/.test(val)) {
         const calculatedVal = parseMath(val);
         inputEl.value = calculatedVal;
-        calculate(); // 치환 후 결과 재계산
+        calculate();
     }
 }
 
-// 엔터 키 입력 시 포커스를 해제(blur)하여 수식을 계산값으로 변경
+// 엔터 키 입력 시 포커스 해제
 function handleEnter(event, inputEl) {
     if (event.key === 'Enter') {
         inputEl.blur();
@@ -150,13 +183,14 @@ function calculate() {
     const ticketsInput = document.getElementById('tickets').value.trim();
     const revInput = document.getElementById('revelations').value.trim();
     const eventRevInput = document.getElementById('eventRevelations').value.trim();
-    const resultBox = document.getElementById('resultBox');
+    
+    const isBattlePass = document.getElementById('battlePass').checked;
+    const isPcRoom = document.getElementById('pcRoom').checked;
 
-    // 모든 입력창이 비어있으면 결과창 숨김
-    if (fatigueInput === '' && ticketsInput === '' && revInput === '' && eventRevInput === '') {
-        resultBox.style.display = 'none';
-        return;
-    }
+    // 할인율 계산 (기본 49개, 각 체크박스당 -5개씩)
+    let revCostPerRun = 49;
+    if (isBattlePass) revCostPerRun -= 5;
+    if (isPcRoom) revCostPerRun -= 5;
 
     // 수식 문자열 계산
     const fatigue = parseMath(fatigueInput);
@@ -164,32 +198,33 @@ function calculate() {
     const revelations = parseMath(revInput);
     const eventRevelations = parseMath(eventRevInput);
 
-    // 총 보유 종말의 계시 합산 (일반 + 이벤트)
+    // 총 보유 종말의 계시 합산
     const totalRevelations = revelations + eventRevelations;
 
     // 피로도로 돌 수 있는 총 횟수 (피로도 1 이상이면 1판 가능)
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
     
-    // 입장권으로 먼저 대체 가능한 판 수 (피로도 기준 판 수를 넘지 않음)
+    // 입장권으로 먼저 대체 가능한 판 수
     const ticketRuns = Math.min(maxRunsByFatigue, tickets);
     
     // 입장권 사용 후 종말의 계시가 필요한 남아있는 판 수
     const remainingRunsNeeded = maxRunsByFatigue - ticketRuns;
     
-    // 보유 종말의 계시로 돌 수 있는 횟수
-    const maxRunsByRev = Math.floor(totalRevelations / 49);
+    // 보유 종말의 계시로 돌 수 있는 횟수 (할인 적용된 소모량 기준)
+    const maxRunsByRev = Math.floor(totalRevelations / revCostPerRun);
     
     // 종말의 계시로 입장 가능한 판 수
     const revRuns = Math.min(remainingRunsNeeded, maxRunsByRev);
     
-    // 실제 총 입장 가능 횟수 (입장권 사용 판 수 + 종말의 계시 사용 판 수)
+    // 실제 총 입장 가능 횟수
     const actualRuns = ticketRuns + revRuns;
     
     // 피로도를 모두 쓰기 위해 부족한 종말의 계시 계산
-    const totalRevNeeded = remainingRunsNeeded * 49;
+    const totalRevNeeded = remainingRunsNeeded * revCostPerRun;
     const missingRev = Math.max(0, totalRevNeeded - totalRevelations);
 
     // UI 업데이트
+    document.getElementById('costPerRun').innerText = revCostPerRun;
     document.getElementById('totalRevSum').innerText = totalRevelations;
     document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
     document.getElementById('actualRuns').innerText = actualRuns;
@@ -202,9 +237,10 @@ function calculate() {
     } else {
         missingInfoEl.innerHTML = `피로도를 입력해주세요.`;
     }
-
-    resultBox.style.display = 'block';
 }
+
+// 초기 로드 시 1회 계산 수행
+calculate();
 </script>
 
 </body>
