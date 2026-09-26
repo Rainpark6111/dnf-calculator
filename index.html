@@ -8,6 +8,15 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #1e1e2e;
+            
+            /* 배경 이미지 및 포토샵 블렌딩 모드 설정 */
+            background-image: url('./bg.jpg'); /* GitHub Pages 호환용 상대 경로 */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover; /* 화면을 가득 채움 (비율 유지를 원하면 contain) */
+            background-attachment: fixed;
+            background-blend-mode: overlay; /* 오버레이 블렌딩 모드 (screen, soft-light 변경 가능) */
+
             color: #cdd6f4;
             display: flex;
             justify-content: center;
