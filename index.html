@@ -489,6 +489,7 @@ function loadStock() {
 }
 
 // 우선순위: 보유 계시 > 입장권 > [Event] 계시 > 큰 상자/구슬 순 > 계정귀속 계시
+// 단, 마지막 부족분을 계정귀속 계시로 정확히 채울 수 있으면 상자 대신 사용해 남는 계시를 없앰
 function computePlan() {
     const fatigue = val('fatigue');
     const rev = val('revelations');
@@ -530,7 +531,14 @@ function computePlan() {
         boxUsed[b.id] = k;
         need -= k * b.amount;
     });
-    // 남은 부족분은 초과량이 가장 적은 상자로 채움
+    // 남은 부족분을 계정귀속 계시(낱개)로 정확히 채울 수 있으면 먼저 사용 → 남는 계시 0
+    let eventUsed = 0;
+    if (need > 0 && eventRev >= need) {
+        eventUsed = need;
+        need = 0;
+    }
+
+    // 그래도 부족하면 초과량이 가장 적은 상자로 채움
     let overshoot = 0;
     while (need > 0) {
         const avail = BOX_TYPES.filter(b => boxCounts[b.id] - boxUsed[b.id] > 0);
@@ -544,9 +552,10 @@ function computePlan() {
     }
     if (need < 0) overshoot = -need;
 
-    // 계정귀속 계시: 상자/구슬을 다 쓰고도 부족할 때만 사용
-    const eventUsed = Math.min(eventRev, Math.max(0, need));
-    need -= eventUsed;
+    // 상자/구슬을 다 쓰고도 부족하면 남은 계정귀속 계시로 채움
+    const extraEvent = Math.min(eventRev - eventUsed, Math.max(0, need));
+    eventUsed += extraEvent;
+    need -= extraEvent;
 
     const missingRev = Math.max(0, (fatigueRuns - tickets) * cost - totalRev);
 
