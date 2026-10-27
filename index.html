@@ -271,9 +271,15 @@
         </div>
     </div>
 
-    <div class="input-group">
-        <label for="tickets">보유 입장권</label>
-        <input type="text" id="tickets" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    <div class="input-row">
+        <div class="input-group">
+            <label for="tickets">보유 입장권</label>
+            <input type="text" id="tickets" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="orb500">종말의 계시 500개 구슬</label>
+            <input type="text" id="orb500" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
     </div>
 
     <!-- 할인 옵션 체크박스 -->
@@ -338,7 +344,8 @@ const BOX_TYPES = [
     { id: 'box30', amount: 30 },
     { id: 'box40', amount: 40 },
     { id: 'box90', amount: 90 },
-    { id: 'box1000', amount: 1000 }
+    { id: 'box1000', amount: 1000 },
+    { id: 'orb500', amount: 500 }
 ];
 
 function calculate() {
@@ -392,7 +399,6 @@ function calculate() {
     // UI 업데이트
     document.getElementById('costPerRun').innerText = revCostPerRun;
     document.getElementById('totalRevSum').innerText = totalRevelations;
-    document.getElementById('boxRevSum').innerText = boxRevelations;
     document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
     document.getElementById('actualRuns').innerText = actualRuns;
     
