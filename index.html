@@ -38,18 +38,34 @@
         }
         .header-container {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            gap: 12px;
             margin-bottom: 24px;
+            text-align: center;
         }
         h2 {
             margin: 0;
             color: #f5e0dc;
             font-size: 20px;
+            text-align: center;
         }
         .link-buttons {
             display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
             gap: 6px;
+        }
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .input-row .input-group {
+            flex: 1;
+            min-width: 0;
+            margin-bottom: 0;
         }
         .link-btn {
             background-color: #181825;
@@ -199,7 +215,7 @@
     <div class="header-container">
         <h2>종말의 계시 계산기</h2>
         <div class="link-buttons">
-            <a href="https://df.nexon.com/" target="_blank" class="link-btn">던</a>
+            <a href="https://df.nexon.com/" target="_blank" class="link-btn">던파</a>
             <a href="https://dundam.xyz/search?server=all&name=%EB%A0%88%EC%9D%B8%EB%B0%95" target="_blank" class="link-btn">던담</a>
             <a href="https://dfmax.xyz/jobs" target="_blank" class="link-btn">던파맥스</a>
             <a href="https://dnf.umi.cat/kr" target="_blank" class="link-btn">역설의 미궁</a>
@@ -211,14 +227,48 @@
         <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
     </div>
     
-    <div class="input-group">
-        <label for="revelations">보유 종말의 계시</label>
-        <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    <div class="input-row">
+        <div class="input-group">
+            <label for="revelations">보유 종말의 계시</label>
+            <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="eventRevelations">[Event]종말의 계시</label>
+            <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
     </div>
 
-    <div class="input-group">
-        <label for="eventRevelations">[Event]종말의 계시</label>
-        <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    <div class="input-row">
+        <div class="input-group">
+            <label for="box2">종말의 계시 2개 상자</label>
+            <input type="text" id="box2" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="box4">종말의 계시 4개 상자</label>
+            <input type="text" id="box4" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+    </div>
+
+    <div class="input-row">
+        <div class="input-group">
+            <label for="box30">종말의 계시 30개 상자</label>
+            <input type="text" id="box30" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="box40">종말의 계시 40개 상자</label>
+            <input type="text" id="box40" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+    </div>
+
+    <div class="input-row">
+        <div class="input-group">
+            <label for="box90">종말의 계시 90개 상자</label>
+            <input type="text" id="box90" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="box1000">종말의 계시 1000개 상자</label>
+            <input type="text" id="box1000" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
     </div>
 
     <div class="input-group">
@@ -239,6 +289,7 @@
     <!-- 결과 박스 -->
     <div class="result-box" id="resultBox">
         <div class="result-item">1판당 소모 계시: <span class="highlight" id="costPerRun">49</span>개</div>
+        <div class="result-item">상자 환산 계시: <span class="highlight" id="boxRevSum">0</span>개</div>
         <div class="result-item">총 보유 종말의 계시: <span class="highlight" id="totalRevSum">0</span>개</div>
         <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
         <div class="result-item">현재 입장 가능: <span class="highlight" id="actualRuns">0</span>판</div>
@@ -281,6 +332,16 @@ function handleEnter(event, inputEl) {
     }
 }
 
+// 상자 종류별 들어있는 계시 개수
+const BOX_TYPES = [
+    { id: 'box2', amount: 2 },
+    { id: 'box4', amount: 4 },
+    { id: 'box30', amount: 30 },
+    { id: 'box40', amount: 40 },
+    { id: 'box90', amount: 90 },
+    { id: 'box1000', amount: 1000 }
+];
+
 function calculate() {
     const fatigueInput = document.getElementById('fatigue').value.trim();
     const ticketsInput = document.getElementById('tickets').value.trim();
@@ -301,8 +362,13 @@ function calculate() {
     const revelations = parseMath(revInput);
     const eventRevelations = parseMath(eventRevInput);
 
-    // 총 보유 종말의 계시 합산
-    const totalRevelations = revelations + eventRevelations;
+    // 상자 개수 × 상자당 계시 수 환산
+    const boxRevelations = BOX_TYPES.reduce((sum, box) => {
+        return sum + parseMath(document.getElementById(box.id).value.trim()) * box.amount;
+    }, 0);
+
+    // 총 보유 종말의 계시 합산 (보유 + 이벤트 + 상자 환산)
+    const totalRevelations = revelations + eventRevelations + boxRevelations;
 
     // 피로도로 돌 수 있는 총 횟수
     const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
@@ -327,6 +393,7 @@ function calculate() {
     // UI 업데이트
     document.getElementById('costPerRun').innerText = revCostPerRun;
     document.getElementById('totalRevSum').innerText = totalRevelations;
+    document.getElementById('boxRevSum').innerText = boxRevelations;
     document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
     document.getElementById('actualRuns').innerText = actualRuns;
     
