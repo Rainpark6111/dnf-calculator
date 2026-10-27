@@ -106,6 +106,12 @@
         input[type="text"]:focus {
             border-color: #cba6f7;
         }
+        .note {
+            margin: 0 0 14px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #9399b2;
+        }
         .checkbox-group {
             display: flex;
             gap: 15px;
@@ -147,6 +153,74 @@
         .alert {
             color: #f38ba8;
             font-weight: bold;
+        }
+
+        /* ===== 사용 계획 ===== */
+        .plan-box {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #45475a;
+        }
+        .plan-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #cba6f7;
+            margin-bottom: 8px;
+        }
+        .plan-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .plan-list li {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 14px;
+            padding: 4px 0;
+        }
+        .plan-empty {
+            font-size: 14px;
+            color: #9399b2;
+        }
+        .plan-after {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #bac2de;
+        }
+        .action-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .use-btn, .undo-btn {
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 11px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .use-btn {
+            flex: 1;
+            background-color: #cba6f7;
+            color: #181825;
+            border: 1px solid #cba6f7;
+        }
+        .use-btn:hover:not(:disabled) {
+            background-color: #b48ef0;
+        }
+        .undo-btn {
+            background-color: #181825;
+            color: #cba6f7;
+            border: 1px solid #45475a;
+        }
+        .undo-btn:hover:not(:disabled) {
+            border-color: #cba6f7;
+        }
+        .use-btn:disabled, .undo-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         /* ===== 반응형 ===== */
@@ -203,7 +277,7 @@
             input[type="text"] {
                 padding: 12px; /* 16px 폰트 유지 → iOS 자동 확대 방지 */
             }
-            .result-item {
+            .result-item, .plan-list li {
                 font-size: 15px;
             }
         }
@@ -282,6 +356,8 @@
         </div>
     </div>
 
+    <p class="note">※ 현재 피로도와 보유 종말의 계시는 캐릭터마다 달라 저장되지 않습니다. 그 외 창고 수량은 입력하면 자동 저장됩니다.</p>
+
     <!-- 할인 옵션 체크박스 -->
     <div class="checkbox-group">
         <label class="checkbox-item">
@@ -299,6 +375,18 @@
         <div class="result-item">피로도 기준 최대: <span class="highlight" id="fatigueRuns">0</span>판</div>
         <div class="result-item">현재 입장 가능: <span class="highlight" id="actualRuns">0</span>판</div>
         <div class="result-item" id="missingInfo">피로도를 입력해주세요.</div>
+
+        <div class="plan-box">
+            <div class="plan-title">최적 사용 계획</div>
+            <ul class="plan-list" id="planList"></ul>
+            <div class="plan-empty" id="planEmpty">피로도를 입력해주세요.</div>
+            <div class="plan-after" id="planAfter"></div>
+        </div>
+
+        <div class="action-row">
+            <button type="button" class="use-btn" id="useBtn" onclick="useResources()" disabled>사용</button>
+            <button type="button" class="undo-btn" id="undoBtn" onclick="undoUse()" disabled>되돌리기</button>
+        </div>
     </div>
 </div>
 
@@ -337,82 +425,196 @@ function handleEnter(event, inputEl) {
     }
 }
 
-// 상자 종류별 들어있는 계시 개수
+// 상자/구슬 종류 (큰 개수 순서 = 사용 우선순위)
 const BOX_TYPES = [
-    { id: 'box2', amount: 2 },
-    { id: 'box4', amount: 4 },
-    { id: 'box30', amount: 30 },
-    { id: 'box40', amount: 40 },
-    { id: 'box90', amount: 90 },
-    { id: 'box1000', amount: 1000 },
-    { id: 'orb500', amount: 500 }
+    { id: 'box1000', amount: 1000, name: '1000개 상자' },
+    { id: 'orb500',  amount: 500,  name: '500개 구슬' },
+    { id: 'box90',   amount: 90,   name: '90개 상자' },
+    { id: 'box40',   amount: 40,   name: '40개 상자' },
+    { id: 'box30',   amount: 30,   name: '30개 상자' },
+    { id: 'box4',    amount: 4,    name: '4개 상자' },
+    { id: 'box2',    amount: 2,    name: '2개 상자' }
 ];
 
+// 저장 대상: 계정 귀속(창고) 수량. 피로도와 보유 종말의 계시는 저장하지 않음
+const SAVED_IDS = ['eventRevelations', 'tickets', ...BOX_TYPES.map(b => b.id)];
+const ALL_IDS = ['fatigue', 'revelations', ...SAVED_IDS];
+const STORAGE_KEY = 'dnfRevelationStock';
+
+const fmt = n => n.toLocaleString('ko-KR');
+const val = id => parseMath(document.getElementById(id).value.trim());
+
+let lastPlan = null;
+let undoSnapshot = null;
+
+function saveStock() {
+    try {
+        const data = {};
+        SAVED_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* 저장 불가 환경이면 무시 */ }
+}
+
+function loadStock() {
+    try {
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        SAVED_IDS.forEach(id => {
+            if (typeof data[id] === 'string') document.getElementById(id).value = data[id];
+        });
+    } catch (e) { /* 손상된 데이터면 무시 */ }
+}
+
+// 우선순위: 보유 계시 > 입장권 > Event 계시 > 큰 상자/구슬 순
+function computePlan() {
+    const fatigue = val('fatigue');
+    const rev = val('revelations');
+    const eventRev = val('eventRevelations');
+    const tickets = val('tickets');
+    const boxCounts = {};
+    BOX_TYPES.forEach(b => { boxCounts[b.id] = val(b.id); });
+
+    let cost = 49;
+    if (document.getElementById('battlePass').checked) cost -= 5;
+    if (document.getElementById('pcRoom').checked) cost -= 5;
+
+    const boxTotal = BOX_TYPES.reduce((s, b) => s + boxCounts[b.id] * b.amount, 0);
+    const totalRev = rev + eventRev + boxTotal;
+
+    const fatigueRuns = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
+    const runs = Math.min(fatigueRuns, tickets + Math.floor(totalRev / cost));
+
+    // 1) 보유 계시로 입장
+    const revRuns = Math.min(runs, Math.floor(rev / cost));
+    // 2) 입장권으로 입장
+    const ticketRuns = Math.min(runs - revRuns, tickets);
+    // 3) 나머지는 계시를 모아서 입장
+    let need = (runs - revRuns - ticketRuns) * cost;
+
+    // 보유 계시 사용량 (입장 분 + 남은 낱개)
+    const revUsed = revRuns * cost + Math.min(rev - revRuns * cost, need);
+    need -= Math.min(rev - revRuns * cost, need);
+
+    // Event 계시
+    const eventUsed = Math.min(eventRev, need);
+    need -= eventUsed;
+
+    // 상자/구슬: 큰 것부터 필요량 안에서 최대한 사용
+    const boxUsed = {};
+    BOX_TYPES.forEach(b => {
+        const k = Math.min(boxCounts[b.id], Math.floor(need / b.amount));
+        boxUsed[b.id] = k;
+        need -= k * b.amount;
+    });
+    // 남은 부족분은 초과량이 가장 적은 상자로 채움
+    let overshoot = 0;
+    while (need > 0) {
+        const avail = BOX_TYPES.filter(b => boxCounts[b.id] - boxUsed[b.id] > 0);
+        if (avail.length === 0) break;
+        const enough = avail.filter(b => b.amount >= need);
+        const pick = enough.length
+            ? enough.reduce((a, b) => (b.amount < a.amount ? b : a))
+            : avail[0]; // avail은 큰 순서 → 가장 큰 상자
+        boxUsed[pick.id] += 1;
+        need -= pick.amount;
+    }
+    if (need < 0) overshoot = -need;
+
+    const missingRev = Math.max(0, (fatigueRuns - tickets) * cost - totalRev);
+
+    return {
+        fatigue, rev, cost, totalRev, fatigueRuns, runs,
+        revUsed, ticketRuns, eventUsed, boxUsed, overshoot, missingRev
+    };
+}
+
 function calculate() {
-    const fatigueInput = document.getElementById('fatigue').value.trim();
-    const ticketsInput = document.getElementById('tickets').value.trim();
-    const revInput = document.getElementById('revelations').value.trim();
-    const eventRevInput = document.getElementById('eventRevelations').value.trim();
-    
-    const isBattlePass = document.getElementById('battlePass').checked;
-    const isPcRoom = document.getElementById('pcRoom').checked;
+    const p = computePlan();
+    lastPlan = p;
+    saveStock();
 
-    // 할인율 계산
-    let revCostPerRun = 49;
-    if (isBattlePass) revCostPerRun -= 5;
-    if (isPcRoom) revCostPerRun -= 5;
+    document.getElementById('costPerRun').innerText = p.cost;
+    document.getElementById('totalRevSum').innerText = fmt(p.totalRev);
+    document.getElementById('fatigueRuns').innerText = p.fatigueRuns;
+    document.getElementById('actualRuns').innerText = p.runs;
 
-    // 수식 문자열 계산
-    const fatigue = parseMath(fatigueInput);
-    const tickets = parseMath(ticketsInput);
-    const revelations = parseMath(revInput);
-    const eventRevelations = parseMath(eventRevInput);
-
-    // 상자 개수 × 상자당 계시 수 환산
-    const boxRevelations = BOX_TYPES.reduce((sum, box) => {
-        return sum + parseMath(document.getElementById(box.id).value.trim()) * box.amount;
-    }, 0);
-
-    // 총 보유 종말의 계시 합산 (보유 + 이벤트 + 상자 환산)
-    const totalRevelations = revelations + eventRevelations + boxRevelations;
-
-    // 피로도로 돌 수 있는 총 횟수
-    const maxRunsByFatigue = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
-    
-    // 입장권 사용 가능 판 수
-    const ticketRuns = Math.min(maxRunsByFatigue, tickets);
-    
-    // 남은 필요 판 수
-    const remainingRunsNeeded = maxRunsByFatigue - ticketRuns;
-    
-    // 계시 소모 판 수
-    const maxRunsByRev = Math.floor(totalRevelations / revCostPerRun);
-    const revRuns = Math.min(remainingRunsNeeded, maxRunsByRev);
-    
-    // 실제 입장 가능 횟수
-    const actualRuns = ticketRuns + revRuns;
-    
-    // 부족한 계시 계산
-    const totalRevNeeded = remainingRunsNeeded * revCostPerRun;
-    const missingRev = Math.max(0, totalRevNeeded - totalRevelations);
-
-    // UI 업데이트
-    document.getElementById('costPerRun').innerText = revCostPerRun;
-    document.getElementById('totalRevSum').innerText = totalRevelations;
-    document.getElementById('fatigueRuns').innerText = maxRunsByFatigue;
-    document.getElementById('actualRuns').innerText = actualRuns;
-    
     const missingInfoEl = document.getElementById('missingInfo');
-    if (missingRev > 0) {
-        missingInfoEl.innerHTML = `부족한 종말의 계시: <span class="alert">${missingRev}개</span>`;
-    } else if (maxRunsByFatigue > 0) {
+    if (p.missingRev > 0) {
+        missingInfoEl.innerHTML = `부족한 종말의 계시: <span class="alert">${fmt(p.missingRev)}개</span>`;
+    } else if (p.fatigueRuns > 0) {
         missingInfoEl.innerHTML = `<span class="highlight">피로도를 모두 소진할 수 있습니다!</span>`;
     } else {
         missingInfoEl.innerHTML = `피로도를 입력해주세요.`;
     }
+
+    // 사용 계획 렌더링
+    const rows = [];
+    if (p.revUsed > 0) rows.push(['보유 종말의 계시', `${fmt(p.revUsed)}개`]);
+    if (p.ticketRuns > 0) rows.push(['보유 입장권', `${fmt(p.ticketRuns)}장`]);
+    if (p.eventUsed > 0) rows.push(['[Event]종말의 계시', `${fmt(p.eventUsed)}개`]);
+    BOX_TYPES.forEach(b => {
+        if (p.boxUsed[b.id] > 0) rows.push([`종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`]);
+    });
+
+    document.getElementById('planList').innerHTML = rows
+        .map(r => `<li><span>${r[0]}</span><span class="highlight">${r[1]}</span></li>`)
+        .join('');
+
+    const emptyEl = document.getElementById('planEmpty');
+    if (rows.length === 0) {
+        emptyEl.style.display = '';
+        emptyEl.innerText = p.fatigueRuns > 0 ? '사용 가능한 재료가 없습니다.' : '피로도를 입력해주세요.';
+    } else {
+        emptyEl.style.display = 'none';
+    }
+
+    const afterEl = document.getElementById('planAfter');
+    if (rows.length > 0) {
+        const remain = p.rev - p.revUsed + p.overshoot;
+        afterEl.innerHTML = `사용 후 보유 종말의 계시: <span class="highlight">${fmt(remain)}개</span>`
+            + ` / 남는 피로도: <span class="highlight">${fmt(Math.max(0, p.fatigue - p.runs * 8))}</span>`;
+    } else {
+        afterEl.innerHTML = '';
+    }
+
+    document.getElementById('useBtn').disabled = p.runs <= 0;
 }
 
-// 초기 로드 시 1회 계산 수행
+function snapshot() {
+    const s = {};
+    ALL_IDS.forEach(id => { s[id] = document.getElementById(id).value; });
+    return s;
+}
+
+// 사용 버튼: 계획대로 입력된 보유량에서 차감
+function useResources() {
+    const p = lastPlan;
+    if (!p || p.runs <= 0) return;
+
+    undoSnapshot = snapshot();
+
+    const set = (id, n) => { document.getElementById(id).value = String(Math.max(0, n)); };
+
+    set('tickets', val('tickets') - p.ticketRuns);
+    set('eventRevelations', val('eventRevelations') - p.eventUsed);
+    BOX_TYPES.forEach(b => set(b.id, val(b.id) - p.boxUsed[b.id]));
+    // 상자에서 나온 남는 계시는 캐릭터의 보유 종말의 계시로 남음
+    set('revelations', p.rev - p.revUsed + p.overshoot);
+    set('fatigue', p.fatigue - p.runs * 8);
+
+    document.getElementById('undoBtn').disabled = false;
+    calculate();
+}
+
+function undoUse() {
+    if (!undoSnapshot) return;
+    ALL_IDS.forEach(id => { document.getElementById(id).value = undoSnapshot[id]; });
+    undoSnapshot = null;
+    document.getElementById('undoBtn').disabled = true;
+    calculate();
+}
+
+// 초기 로드: 저장된 수량 복원 후 계산
+loadStock();
 calculate();
 </script>
 
