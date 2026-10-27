@@ -308,19 +308,25 @@
         </div>
     </div>
     
-    <div class="input-group">
-        <label for="fatigue"><img class="label-icon" src="./energy.png" alt="">현재 피로도</label>
-        <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
-    </div>
-
     <div class="input-row">
+        <div class="input-group">
+            <label for="fatigue"><img class="label-icon" src="./energy.png" alt="">현재 피로도</label>
+            <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
         <div class="input-group">
             <label for="revelations"><img class="label-icon" src="./1.png" alt="">보유 종말의 계시</label>
             <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
+    </div>
+
+    <div class="input-row">
         <div class="input-group">
             <label for="eventRevelations"><img class="label-icon" src="./[c]1.png" alt="">계정귀속 종말의 계시</label>
             <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="c2box"><img class="label-icon" src="./c2box.png" alt="">[C]종말의 계시 2개 상자</label>
+            <input type="text" id="c2box" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
 
@@ -445,6 +451,7 @@ const BOX_TYPES = [
     { id: 'box40',   amount: 40,   name: '40개 상자' },
     { id: 'box30',   amount: 30,   name: '30개 상자' },
     { id: 'box4',    amount: 4,    name: '4개 상자' },
+    { id: 'c2box',   amount: 2,    name: '[C]2개 상자' }, // 계정귀속: 일반 2개 상자보다 먼저 사용
     { id: 'box2',    amount: 2,    name: '2개 상자' }
 ];
 
