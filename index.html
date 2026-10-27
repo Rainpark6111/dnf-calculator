@@ -308,21 +308,26 @@
         </div>
     </div>
     
+    <div class="input-group">
+        <label for="fatigue"><img class="label-icon" src="./energy.png" alt="">현재 피로도</label>
+        <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    </div>
+
     <div class="input-row">
-        <div class="input-group">
-            <label for="fatigue"><img class="label-icon" src="./energy.png" alt="">현재 피로도</label>
-            <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
-        </div>
         <div class="input-group">
             <label for="revelations"><img class="label-icon" src="./1.png" alt="">보유 종말의 계시</label>
             <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+        </div>
+        <div class="input-group">
+            <label for="eventRevelations"><img class="label-icon" src="./[c]1.png" alt="">계정귀속 종말의 계시</label>
+            <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
 
     <div class="input-row">
         <div class="input-group">
-            <label for="eventRevelations"><img class="label-icon" src="./[c]1.png" alt="">계정귀속 종말의 계시</label>
-            <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+            <label for="eventStock"><img class="label-icon" src="./event.png" alt="">[Event]종말의 계시</label>
+            <input type="text" id="eventStock" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
         <div class="input-group">
             <label for="c2box"><img class="label-icon" src="./c2box.png" alt="">[C]종말의 계시 2개 상자</label>
@@ -456,7 +461,7 @@ const BOX_TYPES = [
 ];
 
 // 저장 대상: 계정 귀속(창고) 수량. 피로도와 보유 종말의 계시는 저장하지 않음
-const SAVED_IDS = ['eventRevelations', 'tickets', ...BOX_TYPES.map(b => b.id)];
+const SAVED_IDS = ['eventRevelations', 'eventStock', 'tickets', ...BOX_TYPES.map(b => b.id)];
 const ALL_IDS = ['fatigue', 'revelations', ...SAVED_IDS];
 const STORAGE_KEY = 'dnfRevelationStock';
 
@@ -488,6 +493,7 @@ function computePlan() {
     const fatigue = val('fatigue');
     const rev = val('revelations');
     const eventRev = val('eventRevelations');
+    const eventStock = val('eventStock');
     const tickets = val('tickets');
     const boxCounts = {};
     BOX_TYPES.forEach(b => { boxCounts[b.id] = val(b.id); });
@@ -497,7 +503,7 @@ function computePlan() {
     if (document.getElementById('pcRoom').checked) cost -= 5;
 
     const boxTotal = BOX_TYPES.reduce((s, b) => s + boxCounts[b.id] * b.amount, 0);
-    const totalRev = rev + eventRev + boxTotal;
+    const totalRev = rev + eventRev + eventStock + boxTotal;
 
     const fatigueRuns = fatigue > 0 ? Math.ceil(fatigue / 8) : 0;
     const runs = Math.min(fatigueRuns, tickets + Math.floor(totalRev / cost));
@@ -516,6 +522,10 @@ function computePlan() {
     // Event 계시
     const eventUsed = Math.min(eventRev, need);
     need -= eventUsed;
+
+    // [Event] 계시
+    const stockUsed = Math.min(eventStock, need);
+    need -= stockUsed;
 
     // 상자/구슬: 큰 것부터 필요량 안에서 최대한 사용
     const boxUsed = {};
@@ -542,7 +552,7 @@ function computePlan() {
 
     return {
         fatigue, rev, cost, totalRev, fatigueRuns, runs,
-        revUsed, ticketRuns, eventUsed, boxUsed, overshoot, missingRev
+        revUsed, ticketRuns, eventUsed, stockUsed, boxUsed, overshoot, missingRev
     };
 }
 
@@ -570,6 +580,7 @@ function calculate() {
     if (p.revUsed > 0) rows.push(['보유 종말의 계시', `${fmt(p.revUsed)}개`]);
     if (p.ticketRuns > 0) rows.push(['보유 입장권', `${fmt(p.ticketRuns)}장`]);
     if (p.eventUsed > 0) rows.push(['계정귀속 종말의 계시', `${fmt(p.eventUsed)}개`]);
+    if (p.stockUsed > 0) rows.push(['[Event]종말의 계시', `${fmt(p.stockUsed)}개`]);
     BOX_TYPES.forEach(b => {
         if (p.boxUsed[b.id] > 0) rows.push([`종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`]);
     });
@@ -615,6 +626,7 @@ function useResources() {
 
     set('tickets', val('tickets') - p.ticketRuns);
     set('eventRevelations', val('eventRevelations') - p.eventUsed);
+    set('eventStock', val('eventStock') - p.stockUsed);
     BOX_TYPES.forEach(b => set(b.id, val(b.id) - p.boxUsed[b.id]));
     // 상자에서 나온 남는 계시는 캐릭터의 보유 종말의 계시로 남음
     set('revelations', p.rev - p.revUsed + p.overshoot);
