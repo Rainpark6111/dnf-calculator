@@ -308,68 +308,62 @@
         </div>
     </div>
     
+    <div class="input-group">
+        <label for="fatigue"><img class="label-icon" src="./energy.png" alt="">현재 피로도</label>
+        <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
+    </div>
+
     <div class="input-row">
         <div class="input-group">
-            <label for="fatigue">현재 피로도<img class="label-icon" src="./energy.png" alt=""></label>
-            <input type="text" id="fatigue" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
-        </div>
-        <div class="input-group">
-            <label for="revelations">보유 종말의 계시<img class="label-icon" src="./1.png" alt=""></label>
+            <label for="revelations"><img class="label-icon" src="./1.png" alt="">보유 종말의 계시</label>
             <input type="text" id="revelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
-    </div>
-
-    <div class="input-row">
         <div class="input-group">
-            <label for="eventRevelations">[Event]종말의 계시<img class="label-icon" src="./event.png" alt=""></label>
+            <label for="eventRevelations"><img class="label-icon" src="./%5BC%5D1.png" alt="">계정귀속 종말의 계시</label>
             <input type="text" id="eventRevelations" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
-        <div class="input-group">
-            <label for="c2box">[C]종말의 계시 2개 상자<img class="label-icon" src="./c2box.png" alt=""></label>
-            <input type="text" id="c2box" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
-        </div>
     </div>
 
     <div class="input-row">
         <div class="input-group">
-            <label for="box2">종말의 계시 2개 상자<img class="label-icon" src="./2box.png" alt=""></label>
+            <label for="box2"><img class="label-icon" src="./2box.png" alt="">종말의 계시 2개 상자</label>
             <input type="text" id="box2" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
         <div class="input-group">
-            <label for="box4">종말의 계시 4개 상자<img class="label-icon" src="./4box.png" alt=""></label>
+            <label for="box4"><img class="label-icon" src="./4box.png" alt="">종말의 계시 4개 상자</label>
             <input type="text" id="box4" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
 
     <div class="input-row">
         <div class="input-group">
-            <label for="box30">종말의 계시 30개 상자<img class="label-icon" src="./30box.png" alt=""></label>
+            <label for="box30"><img class="label-icon" src="./30box.png" alt="">종말의 계시 30개 상자</label>
             <input type="text" id="box30" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
         <div class="input-group">
-            <label for="box40">종말의 계시 40개 상자<img class="label-icon" src="./40box.png" alt=""></label>
+            <label for="box40"><img class="label-icon" src="./40box.png" alt="">종말의 계시 40개 상자</label>
             <input type="text" id="box40" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
 
     <div class="input-row">
         <div class="input-group">
-            <label for="box90">종말의 계시 90개 상자<img class="label-icon" src="./90box.png" alt=""></label>
+            <label for="box90"><img class="label-icon" src="./90box.png" alt="">종말의 계시 90개 상자</label>
             <input type="text" id="box90" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
         <div class="input-group">
-            <label for="box1000">종말의 계시 1000개 상자<img class="label-icon" src="./1000box.png" alt=""></label>
+            <label for="box1000"><img class="label-icon" src="./1000box.png" alt="">종말의 계시 1000개 상자</label>
             <input type="text" id="box1000" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
 
     <div class="input-row">
         <div class="input-group">
-            <label for="tickets">보유 입장권<img class="label-icon" src="./ticket.png" alt=""></label>
+            <label for="tickets"><img class="label-icon" src="./ticket.png" alt="">보유 입장권</label>
             <input type="text" id="tickets" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
         <div class="input-group">
-            <label for="orb500">종말의 계시 500개 구슬<img class="label-icon" src="./orb.png" alt=""></label>
+            <label for="orb500"><img class="label-icon" src="./orb.png" alt="">종말의 계시 500개 구슬</label>
             <input type="text" id="orb500" placeholder="" oninput="calculate()" onkeydown="handleEnter(event, this)" onblur="evaluateInput(this)">
         </div>
     </div>
@@ -451,7 +445,6 @@ const BOX_TYPES = [
     { id: 'box40',   amount: 40,   name: '40개 상자' },
     { id: 'box30',   amount: 30,   name: '30개 상자' },
     { id: 'box4',    amount: 4,    name: '4개 상자' },
-    { id: 'c2box',   amount: 2,    name: '[C]2개 상자', label: '[C]종말의 계시 2개 상자' },
     { id: 'box2',    amount: 2,    name: '2개 상자' }
 ];
 
@@ -569,9 +562,9 @@ function calculate() {
     const rows = [];
     if (p.revUsed > 0) rows.push(['보유 종말의 계시', `${fmt(p.revUsed)}개`]);
     if (p.ticketRuns > 0) rows.push(['보유 입장권', `${fmt(p.ticketRuns)}장`]);
-    if (p.eventUsed > 0) rows.push(['[Event]종말의 계시', `${fmt(p.eventUsed)}개`]);
+    if (p.eventUsed > 0) rows.push(['계정귀속 종말의 계시', `${fmt(p.eventUsed)}개`]);
     BOX_TYPES.forEach(b => {
-        if (p.boxUsed[b.id] > 0) rows.push([b.label || `종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`]);
+        if (p.boxUsed[b.id] > 0) rows.push([`종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`]);
     });
 
     document.getElementById('planList').innerHTML = rows
