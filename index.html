@@ -104,7 +104,7 @@
             flex-shrink: 0;
             object-fit: contain;
         }
-        input[type="text"] {
+        input[type="text"], input[type="password"] {
             width: 100%;
             padding: 10px;
             border-radius: 6px;
@@ -115,7 +115,7 @@
             box-sizing: border-box;
             outline: none;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus, input[type="password"]:focus {
             border-color: #cba6f7;
         }
         .note {
@@ -235,6 +235,43 @@
             cursor: not-allowed;
         }
 
+        /* ===== GitHub 동기화 ===== */
+        .sync-box {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #45475a;
+        }
+        .sync-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .sync-status {
+            font-size: 12px;
+            color: #9399b2;
+            line-height: 1.4;
+        }
+        .sync-status.ok { color: #a6e3a1; }
+        .sync-status.err { color: #f38ba8; }
+        button.link-btn {
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .sync-settings {
+            margin-top: 10px;
+        }
+        .sync-settings .note {
+            margin-bottom: 8px;
+        }
+        .sync-settings .action-row {
+            margin-top: 8px;
+        }
+        .sync-settings .use-btn, .sync-settings .undo-btn {
+            font-size: 14px;
+            padding: 9px 12px;
+        }
+
         /* ===== 반응형 ===== */
         body {
             min-height: 100vh;
@@ -286,7 +323,7 @@
                 width: 20px;
                 height: 20px;
             }
-            input[type="text"] {
+            input[type="text"], input[type="password"] {
                 padding: 12px; /* 16px 폰트 유지 → iOS 자동 확대 방지 */
             }
             .result-item, .plan-list li {
@@ -379,7 +416,7 @@
         </div>
     </div>
 
-    <p class="note">※ 현재 피로도와 보유 종말의 계시는 캐릭터마다 달라 저장되지 않습니다. 그 외 창고 수량은 입력하면 자동 저장됩니다.</p>
+    <p class="note">※ 현재 피로도와 보유 종말의 계시는 캐릭터마다 달라 저장되지 않습니다. 그 외 항목은 입력하면 자동 저장되고, GitHub를 통해 다른 컴퓨터와 동기화됩니다.</p>
 
     <!-- 할인 옵션 체크박스 -->
     <div class="checkbox-group">
@@ -409,6 +446,22 @@
         <div class="action-row">
             <button type="button" class="use-btn" id="useBtn" onclick="useResources()" disabled>사용</button>
             <button type="button" class="undo-btn" id="undoBtn" onclick="undoUse()" disabled>되돌리기</button>
+        </div>
+
+        <!-- GitHub 동기화 -->
+        <div class="sync-box">
+            <div class="sync-row">
+                <span class="sync-status" id="syncStatus">동기화 준비 중…</span>
+                <button type="button" class="link-btn" onclick="toggleSyncSettings()">동기화 설정</button>
+            </div>
+            <div class="sync-settings" id="syncSettings" hidden>
+                <p class="note">GitHub Fine-grained token(이 저장소만, Contents: Read and write)을 입력하세요. 토큰은 이 브라우저에만 저장됩니다.</p>
+                <input type="password" id="ghToken" placeholder="github_pat_..." autocomplete="off">
+                <div class="action-row">
+                    <button type="button" class="use-btn" onclick="saveToken()">저장</button>
+                    <button type="button" class="undo-btn" onclick="clearToken()">토큰 삭제</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -460,8 +513,9 @@ const BOX_TYPES = [
     { id: 'c2box',   amount: 2,    name: '[C]2개 상자' } // 같은 2개 상자 중 일반 상자를 먼저 사용
 ];
 
-// 저장 대상: 계정 귀속(창고) 수량. 피로도와 보유 종말의 계시는 저장하지 않음
+// 저장 대상: 현재 피로도와 보유 종말의 계시를 제외한 모든 항목 (입력칸 + 체크박스)
 const SAVED_IDS = ['eventRevelations', 'eventStock', 'tickets', ...BOX_TYPES.map(b => b.id)];
+const SAVED_CHECKS = ['battlePass', 'pcRoom'];
 const ALL_IDS = ['fatigue', 'revelations', ...SAVED_IDS];
 const STORAGE_KEY = 'dnfRevelationStock';
 
@@ -471,22 +525,225 @@ const val = id => parseMath(document.getElementById(id).value.trim());
 let lastPlan = null;
 let undoSnapshot = null;
 
+// 저장 대상 항목의 현재 값을 객체로 모음
+function collectData() {
+    const data = {};
+    SAVED_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+    SAVED_CHECKS.forEach(id => { data[id] = document.getElementById(id).checked; });
+    return data;
+}
+
+// 객체의 값을 화면 입력칸에 반영
+function applyData(data) {
+    SAVED_IDS.forEach(id => {
+        if (typeof data[id] === 'string') document.getElementById(id).value = data[id];
+    });
+    SAVED_CHECKS.forEach(id => {
+        if (typeof data[id] === 'boolean') document.getElementById(id).checked = data[id];
+    });
+}
+
 function saveStock() {
     try {
-        const data = {};
-        SAVED_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectData()));
     } catch (e) { /* 저장 불가 환경이면 무시 */ }
+    schedulePush();
 }
 
 function loadStock() {
     try {
-        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-        SAVED_IDS.forEach(id => {
-            if (typeof data[id] === 'string') document.getElementById(id).value = data[id];
-        });
+        applyData(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
     } catch (e) { /* 손상된 데이터면 무시 */ }
 }
+
+// ===== GitHub 동기화 =====
+// 저장소의 data 브랜치에 있는 data.json을 GitHub API로 읽고 씁니다.
+// (main이 아닌 별도 브랜치를 쓰는 이유: 저장할 때마다 GitHub Pages가 다시 배포되는 것을 막기 위함)
+const GH = { owner: 'Rainpark6111', repo: 'dnf-calculator', base: 'main', branch: 'data', path: 'data.json' };
+const API = `https://api.github.com/repos/${GH.owner}/${GH.repo}`;
+const TOKEN_KEY = 'dnfGithubToken';
+
+let ghSha = null;        // 원격 data.json의 sha (수정 시 필요)
+let ghReady = false;     // 첫 불러오기에 성공하기 전에는 절대 원격에 쓰지 않음 (옛 값으로 덮어쓰기 방지)
+let lastSynced = '';     // 마지막으로 원격과 같았던 데이터(JSON 문자열)
+let pushTimer = null;
+let pushing = false;
+let lastPull = 0;
+
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
+
+function setStatus(text, cls) {
+    const el = document.getElementById('syncStatus');
+    el.textContent = text;
+    el.className = 'sync-status' + (cls ? ' ' + cls : '');
+}
+
+const nowStr = () => new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+// UTF-8 안전 base64
+function toB64(str) {
+    let bin = '';
+    new TextEncoder().encode(str).forEach(b => { bin += String.fromCharCode(b); });
+    return btoa(bin);
+}
+function fromB64(b64) {
+    const bin = atob(b64.replace(/\s/g, ''));
+    return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+function ghFetch(url, opts = {}) {
+    const headers = { 'Accept': 'application/vnd.github+json' };
+    const token = getToken();
+    if (token && !opts.anon) headers['Authorization'] = `Bearer ${token}`;
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    return fetch(url, { method: opts.method || 'GET', body: opts.body, headers, cache: 'no-store', keepalive: !!opts.body });
+}
+
+function syncError(status) {
+    status = Number(status); // Error.message는 문자열이므로 숫자로 변환
+    if (status === 401) return '토큰이 올바르지 않습니다 (동기화 설정에서 다시 입력)';
+    if (status === 403) return '권한 부족 또는 요청 한도 초과';
+    if (status === 404) return '저장소 접근 권한을 확인하세요 (토큰 권한)';
+    return `동기화 실패 (${status})`;
+}
+
+// 원격 data.json을 읽어 화면에 반영
+async function pullRemote() {
+    lastPull = Date.now();
+    setStatus('불러오는 중…');
+    try {
+        const url = `${API}/contents/${GH.path}?ref=${GH.branch}`;
+        let res = await ghFetch(url);
+        // 잘못된 토큰이어도 공개 저장소 읽기는 가능하도록 토큰 없이 재시도
+        if (res.status === 401 && getToken()) res = await ghFetch(url, { anon: true });
+
+        if (res.status === 404) {
+            // 원격에 아직 데이터가 없음 → 현재 로컬 값이 첫 데이터가 됨
+            ghSha = null;
+            ghReady = true;
+            lastSynced = '';
+            if (getToken()) schedulePush(0);
+            else setStatus('저장된 원격 데이터 없음 (토큰을 입력하면 저장됩니다)');
+            return;
+        }
+        if (!res.ok) throw new Error(res.status);
+
+        const json = await res.json();
+        ghSha = json.sha;
+        applyData(JSON.parse(fromB64(json.content)));
+        ghReady = true;
+        lastSynced = JSON.stringify(collectData());
+        calculate(); // 화면 갱신 (값이 같으므로 다시 push되지 않음)
+        setStatus(getToken() ? `동기화됨 ${nowStr()}` : '불러옴 · 토큰이 없어 이 기기의 변경은 GitHub에 저장되지 않습니다', getToken() ? 'ok' : '');
+    } catch (e) {
+        setStatus(navigator.onLine ? syncError(e.message) : '오프라인 · 이 기기에만 저장됩니다', 'err');
+    }
+}
+
+// 변경이 생기면 잠시 후 원격에 저장 (연속 입력은 하나로 묶음)
+function schedulePush(delay = 1500) {
+    if (!ghReady || !getToken()) return;
+    if (JSON.stringify(collectData()) === lastSynced) return;
+    clearTimeout(pushTimer);
+    setStatus('저장 대기 중…');
+    pushTimer = setTimeout(pushRemote, delay);
+}
+
+// data 브랜치가 없으면 main에서 만들어 둠
+async function ensureBranch() {
+    const r = await ghFetch(`${API}/git/ref/heads/${GH.branch}`);
+    if (r.ok) return;
+    if (r.status !== 404) throw new Error(r.status);
+    const m = await ghFetch(`${API}/git/ref/heads/${GH.base}`);
+    if (!m.ok) throw new Error(m.status);
+    const sha = (await m.json()).object.sha;
+    const c = await ghFetch(`${API}/git/refs`, {
+        method: 'POST',
+        body: JSON.stringify({ ref: `refs/heads/${GH.branch}`, sha })
+    });
+    if (!c.ok && c.status !== 422) throw new Error(c.status); // 422 = 이미 존재
+}
+
+async function putFile(body) {
+    const payload = {
+        message: 'update data.json',
+        content: toB64(JSON.stringify(JSON.parse(body), null, 2)),
+        branch: GH.branch
+    };
+    if (ghSha) payload.sha = ghSha;
+    return ghFetch(`${API}/contents/${GH.path}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+async function pushRemote() {
+    pushTimer = null;
+    if (!ghReady || !getToken()) return;
+    if (pushing) { schedulePush(); return; }
+
+    const body = JSON.stringify(collectData());
+    if (body === lastSynced) return;
+
+    pushing = true;
+    setStatus('저장 중…');
+    try {
+        if (!ghSha) await ensureBranch();
+        let res = await putFile(body);
+
+        // sha 불일치(다른 컴퓨터가 먼저 저장했거나 파일이 새로 생김) → 최신 sha를 받아 한 번 더 시도 (마지막 저장 우선)
+        if (res.status === 409 || res.status === 422) {
+            const cur = await ghFetch(`${API}/contents/${GH.path}?ref=${GH.branch}`);
+            ghSha = cur.ok ? (await cur.json()).sha : null;
+            res = await putFile(body);
+        }
+        if (!res.ok) throw new Error(res.status);
+
+        ghSha = (await res.json()).content.sha;
+        lastSynced = body;
+        setStatus(`동기화됨 ${nowStr()}`, 'ok');
+    } catch (e) {
+        setStatus(navigator.onLine ? syncError(e.message) : '오프라인 · 이 기기에만 저장됩니다', 'err');
+    } finally {
+        pushing = false;
+        if (JSON.stringify(collectData()) !== lastSynced && !document.getElementById('syncStatus').classList.contains('err')) {
+            schedulePush(); // 저장 중에 또 바뀐 값이 있으면 이어서 저장
+        }
+    }
+}
+
+function toggleSyncSettings() {
+    const box = document.getElementById('syncSettings');
+    box.hidden = !box.hidden;
+    if (!box.hidden) document.getElementById('ghToken').focus();
+}
+
+function saveToken() {
+    const input = document.getElementById('ghToken');
+    const token = input.value.trim();
+    if (!token) return;
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* 무시 */ }
+    input.value = '';
+    document.getElementById('syncSettings').hidden = true;
+    ghReady = false;
+    pullRemote();
+}
+
+function clearToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* 무시 */ }
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    document.getElementById('ghToken').value = '';
+    document.getElementById('syncSettings').hidden = true;
+    setStatus('토큰 삭제됨 · 이 기기에만 저장됩니다');
+}
+
+// 탭을 벗어날 때 대기 중인 저장을 즉시 처리, 다시 돌아오면 최신 데이터를 불러옴
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        if (pushTimer) { clearTimeout(pushTimer); pushRemote(); }
+    } else if (ghReady && !pushing && !pushTimer && Date.now() - lastPull > 10000
+               && !/^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || '')) {
+        pullRemote();
+    }
+});
 
 // 우선순위: 보유 계시 > 입장권 > [Event] 계시 > 큰 상자/구슬 순 > 계정귀속 계시
 // 단, 마지막 부족분을 계정귀속 계시로 정확히 채울 수 있으면 상자 대신 사용해 남는 계시를 없앰
@@ -653,9 +910,10 @@ function undoUse() {
     calculate();
 }
 
-// 초기 로드: 저장된 수량 복원 후 계산
+// 초기 로드: 이 기기에 저장된 값을 먼저 보여주고, GitHub의 최신 데이터를 불러와 덮어씀
 loadStock();
 calculate();
+pullRemote();
 </script>
 
 </body>
