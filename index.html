@@ -187,9 +187,28 @@
         .plan-list li {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             gap: 8px;
             font-size: 14px;
             padding: 4px 0;
+        }
+        .plan-val {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .plan-icon {
+            width: 1.6em;
+            height: 1.6em;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        /* 보유 종말의 계시: 다른 항목과 점선으로 구분 */
+        .plan-list li.plan-own {
+            margin-bottom: 6px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #6c7086;
         }
         .plan-empty {
             font-size: 14px;
@@ -503,14 +522,14 @@ function handleEnter(event, inputEl) {
 
 // 상자/구슬 종류 (큰 개수 순서 = 사용 우선순위)
 const BOX_TYPES = [
-    { id: 'box1000', amount: 1000, name: '1000개 상자' },
-    { id: 'orb500',  amount: 500,  name: '500개 구슬' },
-    { id: 'box90',   amount: 90,   name: '90개 상자' },
-    { id: 'box40',   amount: 40,   name: '40개 상자' },
-    { id: 'box30',   amount: 30,   name: '30개 상자' },
-    { id: 'box4',    amount: 4,    name: '4개 상자' },
-    { id: 'box2',    amount: 2,    name: '2개 상자' },
-    { id: 'c2box',   amount: 2,    name: '[C]2개 상자' } // 같은 2개 상자 중 일반 상자를 먼저 사용
+    { id: 'box1000', amount: 1000, name: '1000개 상자', icon: '1000box.png' },
+    { id: 'orb500',  amount: 500,  name: '500개 구슬', icon: 'orb.png' },
+    { id: 'box90',   amount: 90,   name: '90개 상자', icon: '90box.png' },
+    { id: 'box40',   amount: 40,   name: '40개 상자', icon: '40box.png' },
+    { id: 'box30',   amount: 30,   name: '30개 상자', icon: '30box.png' },
+    { id: 'box4',    amount: 4,    name: '4개 상자', icon: '4box.png' },
+    { id: 'box2',    amount: 2,    name: '2개 상자', icon: '2box.png' },
+    { id: 'c2box',   amount: 2,    name: '[C]2개 상자', icon: 'c2box.png' } // 같은 2개 상자 중 일반 상자를 먼저 사용
 ];
 
 // 저장 대상: 현재 피로도와 보유 종말의 계시를 제외한 모든 항목 (입력칸 + 체크박스)
@@ -842,17 +861,24 @@ function calculate() {
     }
 
     // 사용 계획 렌더링
+    // [이름, 수량 텍스트, 아이콘 파일, 보유 계시 여부]
     const rows = [];
-    if (p.revUsed > 0) rows.push(['보유 종말의 계시', `${fmt(p.revUsed)}개`]);
-    if (p.ticketRuns > 0) rows.push(['보유 입장권', `${fmt(p.ticketRuns)}장`]);
-    if (p.stockUsed > 0) rows.push(['[Event]종말의 계시', `${fmt(p.stockUsed)}개`]);
+    if (p.revUsed > 0) rows.push(['보유 종말의 계시', `${fmt(p.revUsed)}개`, '1.png', true]);
+    if (p.ticketRuns > 0) rows.push(['보유 입장권', `${fmt(p.ticketRuns)}장`, 'ticket.png', false]);
+    if (p.stockUsed > 0) rows.push(['[Event]종말의 계시', `${fmt(p.stockUsed)}개`, 'event.png', false]);
     BOX_TYPES.forEach(b => {
-        if (p.boxUsed[b.id] > 0) rows.push([`종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`]);
+        if (p.boxUsed[b.id] > 0) rows.push([`종말의 계시 ${b.name}`, `${fmt(p.boxUsed[b.id])}개`, b.icon, false]);
     });
-    if (p.eventUsed > 0) rows.push(['계정귀속 종말의 계시', `${fmt(p.eventUsed)}개`]);
+    if (p.eventUsed > 0) rows.push(['계정귀속 종말의 계시', `${fmt(p.eventUsed)}개`, '[c]1.png', false]);
 
+    // 보유 종말의 계시는 다른 항목이 있을 때만 점선으로 구분
     document.getElementById('planList').innerHTML = rows
-        .map(r => `<li><span>${r[0]}</span><span class="highlight">${r[1]}</span></li>`)
+        .map(r => {
+            const cls = r[3] && rows.length > 1 ? ' class="plan-own"' : '';
+            return `<li${cls}><span>${r[0]}</span>`
+                + `<span class="plan-val"><img class="plan-icon" src="./assets/icons/${r[2]}" alt="">`
+                + `<span class="highlight">${r[1]}</span></span></li>`;
+        })
         .join('');
 
     const emptyEl = document.getElementById('planEmpty');
