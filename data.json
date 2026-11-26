@@ -1,6 +1,6 @@
 {
   "eventRevelations": "4420",
-  "eventStock": "6216",
+  "eventStock": "6316",
   "tickets": "0",
   "box1000": "0",
   "orb500": "0",
@@ -10,6 +10,6 @@
   "box4": "0",
   "box2": "0",
   "c2box": "0",
-  "battlePass": true,
+  "battlePass": false,
   "pcRoom": false
 }
