@@ -490,8 +490,11 @@
 function parseMath(expression) {
     if (!expression) return 0;
     
-    const sanitized = expression.replace(/\s+/g, '');
+    let sanitized = expression.replace(/\s+/g, '');
     if (!/^[0-9+\-*/.]*$/.test(sanitized)) return 0;
+
+    // 숫자 앞의 불필요한 0 제거 (0777 → 777, 10+007 → 10+7). 0777이 8진수(511)로 해석되는 것을 방지
+    sanitized = sanitized.replace(/(^|[^0-9.])0+(?=\d)/g, '$1');
 
     try {
         const result = new Function(`return ${sanitized}`)();
@@ -935,6 +938,28 @@ function undoUse() {
     document.getElementById('undoBtn').disabled = true;
     calculate();
 }
+
+// 입력칸 편의 기능
+ALL_IDS.forEach(id => {
+    const el = document.getElementById(id);
+
+    // 칸을 선택했을 때 값이 0이면 지워서 바로 입력할 수 있게 함
+    el.addEventListener('focus', () => {
+        if (el.value.trim() === '0') {
+            el.value = '';
+            calculate();
+        }
+    });
+
+    // 0777 처럼 앞에 0을 붙여 입력하면 777로 자동 변환
+    el.addEventListener('input', () => {
+        const fixed = el.value.replace(/^(\s*)0+(?=\d)/, '$1');
+        if (fixed !== el.value) {
+            el.value = fixed;
+            calculate();
+        }
+    });
+});
 
 // 초기 로드: 이 기기에 저장된 값을 먼저 보여주고, GitHub의 최신 데이터를 불러와 덮어씀
 loadStock();
