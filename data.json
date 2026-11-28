@@ -10,6 +10,6 @@
   "box4": "0",
   "box2": "0",
   "c2box": "0",
-  "battlePass": false,
+  "battlePass": true,
   "pcRoom": false
 }
